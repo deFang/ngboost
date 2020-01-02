@@ -11,6 +11,8 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
 
     def __init__(self,
                  X_tr,
+                 Y_tr,
+                 lgb_param,
                  Dist=Normal,
                  Score=MLE,
                  Base=default_tree_learner,
@@ -42,7 +44,9 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
              'objective': 'fair',
              'num_round': 10,
             }
-        self.X = X_tr
+        self.lgb_param = lgb_param
+        self.X_tr = X_tr
+        self.Y_tr = Y_tr
         self.dataset_tr = lgb.Dataset(X_tr)
 
     def dist_to_prediction(self, dist): # predictions for regression are typically conditional means
@@ -63,14 +67,17 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
             models.append(f_model)
 
         fitted = np.array([m.predict(X) for m in models]).T
+        self.base_models.append(models)
         return fitted
 
-    def fit(self, X, Y, 
-            X_val = None, Y_val = None, 
+    def fit(self,  X_val = None, Y_val = None, 
             sample_weight = None, val_sample_weight = None,
             train_loss_monitor = None, val_loss_monitor = None, 
             early_stopping_rounds = None):
 
+        X = self.X_tr
+        Y = self.Y_tr
+        
         loss_list = []
         val_loss_list = []
 
