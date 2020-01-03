@@ -26,24 +26,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
         assert Dist.problem_type == "regression"
         super().__init__(Dist, Score, Base, natural_gradient, n_estimators, learning_rate,
                          minibatch_frac, verbose, verbose_eval, tol)
-        self.lgb_param = {
-             'bagging_fraction': 0.3,
-             'bagging_freq': 13,
-             'boosting_type': 'gbdt',
-             'feature_fraction': 0.5,
-             'lambda_l1': 0,
-             'lambda_l2': 63,
-             'learning_rate': 0.015,
-             'max_bin': 127,
-             'max_depth': 15,
-             'min_data_in_leaf': 256,
-             'num_leaves': 255,
-             'num_threads': 15,
-             'task': 'train',
-             'verbose': 0,
-             'objective': 'fair',
-             'num_round': 10,
-            }
+
         self.lgb_param = lgb_param
         self.X_tr = X_tr
         self.Y_tr = Y_tr
@@ -56,13 +39,14 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
         models = list()
         for g in grads.T:
             self.dataset_tr.set_label(g)
+            self.s
             f_model = lgb.train(
                     self.lgb_param,
                     self.dataset_tr,
                     verbose_eval=True,
-                    valid_sets= [self.dataset_tr],
-                    valid_names = ['train'],
-                    num_boost_round = self.lgb_param.get('num_round', 10)
+                    valid_sets= [self.dataset_tr, self.dataset_t],
+                    valid_names = ['train', 'test'],
+                    num_boost_round = self.lgb_param.get('num_round', 1)
                     )
             models.append(f_model)
 
@@ -77,7 +61,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
 
         X = self.X_tr
         Y = self.Y_tr
-        
+
         loss_list = []
         val_loss_list = []
 
@@ -134,7 +118,6 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
                 if self.verbose:
                     print(f"== Quitting at iteration / GRAD {itr}")
                 break
-
 
         self.evals_result = {}
         metric = self.Score.__name__.upper()
