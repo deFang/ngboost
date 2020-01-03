@@ -39,13 +39,12 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
         models = list()
         for g in grads.T:
             self.dataset_tr.set_label(g)
-            self.s
             f_model = lgb.train(
                     self.lgb_param,
                     self.dataset_tr,
                     verbose_eval=True,
-                    valid_sets= [self.dataset_tr, self.dataset_t],
-                    valid_names = ['train', 'test'],
+                    valid_sets= [self.dataset_tr],
+                    valid_names = ['train'],
                     num_boost_round = self.lgb_param.get('num_round', 1)
                     )
             models.append(f_model)
