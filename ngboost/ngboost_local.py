@@ -50,6 +50,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
         return fitted
 
     def fit(self, X_tr, Y_tr, X_val = None, Y_val = None, 
+            feature_name = None, 
             sample_weight = None, val_sample_weight = None,
             train_loss_monitor = None, val_loss_monitor = None, 
             early_stopping_rounds = None,
@@ -57,7 +58,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
 
         X = X_tr
         Y = Y_tr
-        dataset = lgb.Dataset(X)
+        dataset = lgb.Dataset(X, feature_name=list(feature_name))
 
         loss_list = []
         val_loss_list = []
