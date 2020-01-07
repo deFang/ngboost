@@ -10,8 +10,6 @@ from sklearn.base import BaseEstimator
 class NGBRegressorLGB(NGBoost, BaseEstimator):
 
     def __init__(self,
-                 X_tr,
-                 Y_tr,
                  lgb_param,
                  Dist=Normal,
                  Score=MLE,
@@ -28,22 +26,20 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
                          minibatch_frac, verbose, verbose_eval, tol)
 
         self.lgb_param = lgb_param
-        self.X_tr = X_tr
-        self.Y_tr = Y_tr
-        self.dataset_tr = lgb.Dataset(X_tr)
+
 
     def dist_to_prediction(self, dist): # predictions for regression are typically conditional means
         return dist.mean()
 
-    def fit_base(self, X, grads, sample_weight=None):
+    def fit_base(self, dataset_tr, X, grads, sample_weight=None):
         models = list()
         for g in grads.T:
-            self.dataset_tr.set_label(g)
+            dataset_tr.set_label(g)
             f_model = lgb.train(
                     self.lgb_param,
-                    self.dataset_tr,
+                    dataset_tr,
                     verbose_eval=True,
-                    valid_sets= [self.dataset_tr],
+                    valid_sets= [dataset_tr],
                     valid_names = ['train'],
                     num_boost_round = self.lgb_param.get('num_round', 1)
                     )
@@ -53,13 +49,15 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
         self.base_models.append(models)
         return fitted
 
-    def fit(self,  X_val = None, Y_val = None, 
+    def fit(self, X_tr, Y_tr, X_val = None, Y_val = None, 
             sample_weight = None, val_sample_weight = None,
             train_loss_monitor = None, val_loss_monitor = None, 
-            early_stopping_rounds = None):
+            early_stopping_rounds = None,
+            callbacks=[]):
 
-        X = self.X_tr
-        Y = self.Y_tr
+        X = X_tr
+        Y = Y_tr
+        dataset = lgb.Dataset(X)
 
         loss_list = []
         val_loss_list = []
@@ -82,13 +80,18 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
             val_loss_monitor = lambda D,Y: S.loss(D, Y, sample_weight=val_sample_weight)
 
         for itr in range(self.n_estimators):
+            self.iteration = itr
+            if len(callbacks) > 0:
+                for callback in callbacks:
+                    callback(self)
+
             D = self.Dist(params.T)
 
             loss_list += [train_loss_monitor(D, Y)]
             loss = loss_list[-1]
             grads = S.grad(D, Y, natural=self.natural_gradient)
 
-            proj_grad = self.fit_base(X, grads, sample_weight)
+            proj_grad = self.fit_base(dataset, X, grads, sample_weight)
             scale = self.line_search(proj_grad, params, Y, sample_weight)
 
             # pdb.set_trace()
@@ -148,3 +151,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
             if max_iter and i == max_iter:
                 break
         return predictions
+
+    def save_model(self, path):
+        import joblib
+        joblib.dump(self, path)
