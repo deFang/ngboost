@@ -58,7 +58,7 @@ class NGBRegressorLGB(NGBoost, BaseEstimator):
 
         X = X_tr
         Y = Y_tr
-        dataset = lgb.Dataset(X, feature_name=list(feature_name))
+        dataset = lgb.Dataset(X, feature_name=feature_name)
 
         loss_list = []
         val_loss_list = []
